@@ -40,13 +40,13 @@ nlohmann::json SplitDistanceBarrierRBProblem::settings() const
 void SplitDistanceBarrierRBProblem::simulation_step(
     bool& had_collision, bool& _has_intersections, bool solve_collision)
 {
+    std::cout << "at SplitDistanceBarrierRBProblem::simulation_step" << std::endl;
     // Take an unconstrained time-step
     m_time_stepper->step(m_assembler, gravity, timestep());
 
     update_dof();
 
-    had_collision =
-        detect_collisions(poses_t0, poses_t1, CollisionCheck::CONSERVATIVE);
+    had_collision = detect_collisions(poses_t0, poses_t1, CollisionCheck::CONSERVATIVE);
 
     // Check if minimum distance is violated
     min_distance = compute_min_distance(this->poses_to_dofs(poses_t1));

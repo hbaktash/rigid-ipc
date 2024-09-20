@@ -1,9 +1,10 @@
 {
     "scene_type": "distance_barrier_rb_problem",
-    "max_iterations": 1000,
+    "max_iterations": 200,
     "timestep": 0.01,
     "rigid_body_problem": {
         "coefficient_restitution": -1,
+        "coefficient_friction": 0.1,
         "gravity": [0, -9.8, 0],
         "rigid_bodies": [{
             "mesh": "spot.obj",

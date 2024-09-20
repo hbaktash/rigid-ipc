@@ -117,7 +117,7 @@ Eigen::VectorXi DistanceBarrierRBProblem::free_dof() const
 
 void DistanceBarrierRBProblem::simulation_step(
     bool& had_collisions, bool& _has_intersections, bool solve_collisions)
-{
+{   
     // Advance the poses, but leave the current pose unchanged for now.
     for (size_t i = 0; i < num_bodies(); i++) {
         m_assembler[i].pose_prev = m_assembler[i].pose;
