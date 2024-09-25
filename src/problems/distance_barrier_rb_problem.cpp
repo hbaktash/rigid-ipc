@@ -20,6 +20,9 @@
 #include <logger.hpp>
 #include <profiler.hpp>
 
+
+// #include <igl/Timer.h>
+
 namespace ipc::rigid {
 
 DistanceBarrierRBProblem::DistanceBarrierRBProblem()
@@ -118,6 +121,8 @@ Eigen::VectorXi DistanceBarrierRBProblem::free_dof() const
 void DistanceBarrierRBProblem::simulation_step(
     bool& had_collisions, bool& _has_intersections, bool solve_collisions)
 {   
+
+
     // Advance the poses, but leave the current pose unchanged for now.
     for (size_t i = 0; i < num_bodies(); i++) {
         m_assembler[i].pose_prev = m_assembler[i].pose;
@@ -134,9 +139,18 @@ void DistanceBarrierRBProblem::simulation_step(
     // Disable barriers if solve_collision == false
     this->m_use_barriers = solve_collisions;
 
+    std::cout << " ########## --------- single step --------- ########## " << std::endl;
     // Solve constraints updates the constraints and takes the step
+    // igl::Timer timer;
+    // timer.start();
     update_constraints();
+    // std::cout << " -- update_constraint() time: "<< timer.getElapsedTime() << std::endl;
+    // timer.stop();
+
+    // timer.start();
     opt_result = solve_constraints();
+    // std::cout << " -- solve_constraint() time: "<< timer.getElapsedTime() << std::endl;
+    // timer.stop();
     _has_intersections = take_step(opt_result.x);
     step_kinematic_bodies();
     had_collisions = m_had_collisions;

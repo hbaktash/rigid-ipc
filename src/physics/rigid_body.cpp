@@ -12,7 +12,154 @@
 #include <utils/flatten.hpp>
 #include <utils/not_implemented_error.hpp>
 
+// #include <igl/Timer.h>
+#include <igl/edges.h>
+
+#include <Eigen/Core>
+#include "libqhullcpp/QhullFacet.h"
+#include "libqhullcpp/QhullFacetList.h"
+#include "libqhullcpp/QhullVertex.h"
+#include "libqhullcpp/QhullVertexSet.h"
+#include "libqhullcpp/Qhull.h"
+#include "libqhull/qhull_a.h"
+#include "geometrycentral/surface/manifold_surface_mesh.h"
+#include "geometrycentral/surface/vertex_position_geometry.h"
+
+using namespace geometrycentral;
+using namespace geometrycentral::surface;
+using orgQhull::Qhull;
+using orgQhull::QhullFacet;
+using orgQhull::QhullVertex;
+
+
 namespace ipc::rigid {
+
+std::tuple<Eigen::MatrixXi, std::vector<size_t>, Eigen::MatrixXd>
+get_convex_hull(Eigen::MatrixXd point_set){
+    const size_t num_points = point_set.rows();
+    const size_t dim = 3;
+    char flags[64];
+    // sprintf(flags, "qhull Qt");
+    std::vector<double> pset_flat_vec(num_points*dim);
+    for (size_t i = 0; i < num_points ; i++){
+        pset_flat_vec[3*i]     = point_set(i, 0);
+        pset_flat_vec[3*i + 1] = point_set(i, 1);
+        pset_flat_vec[3*i + 2] = point_set(i, 2);
+    }
+    coordT* data = new coordT[num_points * dim];
+    std::copy(pset_flat_vec.begin(), pset_flat_vec.end(), data);
+    Qhull qhull("n", 3, num_points, data, "QJ Q3");
+    
+    // make data structures
+    size_t my_count = 0, max_ind = 0;
+    std::vector<size_t> indices;
+    for (QhullVertex qvertex: qhull.vertexList()){
+        my_count++;
+        indices.push_back(qvertex.id()-1);
+        if (qvertex.id() - 1 > max_ind)
+            max_ind = qvertex.id() - 1;
+    }
+    if (qhull.vertexCount() > max_ind + 1)
+        printf(" vert count is %d, my count: %d, max_ind: %d \n", qhull.vertexCount(), my_count, max_ind);
+    Eigen::MatrixXd poses(qhull.vertexCount(),3);  // 
+    std::sort(indices.begin(), indices.end());
+    std::map<size_t, size_t> re_indexing;
+    for (size_t i = 0; i < indices.size(); i++){
+        re_indexing[indices[i]] = i;
+    }
+
+    // tracing old vertices
+    std::vector<size_t> old_indices(qhull.vertexCount());
+    for (QhullVertex qvertex: qhull.vertexList()){
+        size_t old_ind = qvertex.point().id();
+        old_indices[re_indexing[qvertex.id() - 1]] = old_ind;
+        // printf("old index %d new index- %d\n", old_ind, re_indexing[qvertex.id() - 1]);
+    }
+    std::vector<std::vector<size_t>> hull_faces;
+    for (QhullFacet qfacet: qhull.facetList().toStdVector()){
+        std::vector<size_t> hull_face;
+        // std::cout << qfacet << "\n";
+        for (QhullVertex qvertex: qfacet.vertices().toStdVector()){
+            // size_t id = qvertex.id() - 1; // qhull is 1-based for some reason
+            size_t id = re_indexing[qvertex.id() - 1]; // qhull is 1-based for some reason
+            hull_face.push_back(id);
+            
+            // position
+            double x, y, z;
+            const realT *c= qvertex.point().coordinates();
+            for(int k= qvertex.dimension(); k--; ){
+                // std::cout << " "<< k << " " << ; // QH11010 FIX: %5.2g
+                if (k == 2) x = *c++;
+                if (k == 1) y = *c++;
+                if (k == 0) z = *c++;
+            }
+            poses.row(id) << x, y, z;
+        }
+        hull_faces.push_back(hull_face);
+    }
+    //
+    // build and return mesh
+    std::unique_ptr<ManifoldSurfaceMesh> mesh;
+    std::unique_ptr<VertexPositionGeometry> geometry;
+    SurfaceMesh* surf_mesh = new SurfaceMesh(hull_faces);
+    surf_mesh->greedilyOrientFaces();
+
+    // make sure of outward orientation; can't just make qhull do it ??!
+    Face f0 = surf_mesh->face(0);
+    Vertex v0 = f0.halfedge().tailVertex(),
+           v1 = f0.halfedge().tipVertex(),
+           v2 = f0.halfedge().next().tipVertex();
+    Eigen::Vector3d p0 = poses.row(v0.getIndex()),
+                    p1 = poses.row(v1.getIndex()),
+                    p2 = poses.row(v2.getIndex());
+    Eigen::Vector3d p_other = poses.row(f0.halfedge().twin().next().tipVertex().getIndex()); // damn you qhull!!!!
+    if ((p_other - p0).dot(cross(p1 - p0, p2 - p1)) > 0.){
+        surf_mesh->invertOrientation(f0);
+        surf_mesh->greedilyOrientFaces(); // will start with f0!
+    }
+    surf_mesh->compress();
+
+    hull_faces = surf_mesh->getFaceVertexList(); // oriented
+    
+    Eigen::MatrixXi F(hull_faces.size(), 3);
+    for (size_t i = 0; i < hull_faces.size(); i++){
+        F.row(i) << hull_faces[i][0], hull_faces[i][1], hull_faces[i][2];
+    }
+
+    return {F, old_indices, poses};
+}
+
+
+// Eigen::VectorXi get_hull_indicator(Eigen::MatrixXd V){
+//     int nv = V.rows();
+//     Eigen::MatrixXd object_V = V.block(0, 0, nv - 4, 3);
+//     // get hull
+    
+//     std::vector<std::vector<size_t>> hull_faces;
+//     std::vector<size_t> hull_to_input_map;
+//     Eigen::MatrixXd hull_poses;
+//     std::tie(hull_faces, hull_to_input_map, hull_poses) = get_convex_hull(object_V); // TODO
+//     Eigen::VectorXi is_on_hull(V.rows());
+//     is_on_hull.setZero();
+
+//     // index navigator
+//     for (std::vector<size_t> face: hull_faces){ 
+//         for (size_t hull_ind: face){
+//             int old_ind = hull_to_input_map[hull_ind]; // since ground indices come after object indices, we dont need a secon mapping
+//             is_on_hull(old_ind) = 1;
+//         }
+//     }
+//     Eigen::MatrixXi hull_faces_eigen(hull_faces.size(), 3);
+//     for (size_t i = 0; i < hull_faces.size(); i++){
+//         hull_faces_eigen.row(i) << hull_faces[i][0], hull_faces[i][1], hull_faces[i][2];
+//     }
+//     // igl::opengl::glfw::Viewer viewer;
+//     // viewer.data().set_mesh(hull_poses, hull_faces_eigen);
+//     // viewer.data().set_face_based(true);
+//     // viewer.launch();
+    
+//     return is_on_hull;
+// }
 
 void center_vertices(
     Eigen::MatrixXd& vertices,
@@ -142,6 +289,34 @@ RigidBody::RigidBody(
         // τ = R₀ᵀτ₀ (τ₀ expressed in body coordinates)
         // NOTE: this transformation will be done later
         // this->force.rotation = R0.transpose() * this->force.rotation;
+
+
+        // Hull stuff
+        // only modifying V, F, E
+        //  ; other geometric properties are computed after this
+        //  ; center of mass is already computed
+        if (this->vertices.rows() > 4){ // not ground
+            std::cout<< " ######### modifying object to its convex hull ######### "<< std::endl;
+            std::vector<size_t> hull_to_input_map;
+            Eigen::MatrixXi hull_F;
+            Eigen::MatrixXd hull_V;
+            std::tie(hull_F, hull_to_input_map, hull_V) = get_convex_hull(this->vertices); // TODO
+            this->vertices = hull_V;
+            this->faces = hull_F;
+            std::cout<< " original vertices: "<< vertices.rows() << " original faces: "<< faces.rows() << std::endl;
+            std::cout<< " hull vertices: "<< hull_V.rows() << " hull faces: "<< hull_F.rows() << std::endl;
+            // just following read_obj.cpp; not sure why conservative resize is used.
+            Eigen::MatrixXi faceE, tmp_E;
+            igl::edges(this->faces, faceE); 
+            tmp_E.conservativeResize(tmp_E.rows() + faceE.rows(), 2);
+            tmp_E.bottomRows(faceE.rows()) = faceE;
+            this->edges = tmp_E; 
+            std::cout<<" original edges: "<< edges.rows() << " \n hull edges: "<< tmp_E.rows() << std::endl;
+            mesh_selector = MeshSelector(this->vertices.rows(), this->edges, this->faces);
+        }
+        else {
+            std::cout<< " @@@@@@@@@@ ground probably @@@@@@@@@@ "<< std::endl;
+        }
     } else {
         moment_of_inertia = density * I.diagonal();
         R0 = Eigen::Matrix<double, 1, 1>::Identity();
@@ -167,13 +342,13 @@ RigidBody::RigidBody(
     r_max = this->vertices.rowwise().norm().maxCoeff();
 
     average_edge_length = 0;
-    for (long i = 0; i < edges.rows(); i++) {
+    for (long i = 0; i < this->edges.rows(); i++) {
         average_edge_length +=
-            (this->vertices.row(edges(i, 0)) - this->vertices.row(edges(i, 1)))
+            (this->vertices.row(this->edges(i, 0)) - this->vertices.row(this->edges(i, 1)))
                 .norm();
     }
-    if (edges.rows() > 0) {
-        average_edge_length /= edges.rows();
+    if (this->edges.rows() > 0) {
+        average_edge_length /= this->edges.rows();
     }
     assert(std::isfinite(average_edge_length));
 

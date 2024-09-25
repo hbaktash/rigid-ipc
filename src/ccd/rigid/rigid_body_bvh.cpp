@@ -11,8 +11,8 @@ void detect_body_pair_collision_candidates_from_aabbs(
     Candidates& candidates,
     const double inflation_radius)
 {
-    bool build_ev = collision_types & CollisionType::EDGE_VERTEX;
-    bool build_ee = collision_types & CollisionType::EDGE_EDGE;
+    bool build_ev = collision_types & CollisionType::EDGE_VERTEX; //false; // 
+    bool build_ee = collision_types & CollisionType::EDGE_EDGE; //false; // 
     bool build_fv = collision_types & CollisionType::FACE_VERTEX;
     auto add_ev = [&](size_t eai, size_t vbi) {
         if (build_ev) {
@@ -53,6 +53,8 @@ void detect_body_pair_collision_candidates_from_aabbs(
     const RigidBody& bodyA = bodies[bodyA_id];
     const RigidBody& bodyB = bodies[bodyB_id];
 
+    // BodyB is the object; not ground
+    
     const std::vector<AABB> bodyB_vertex_aabbs =
         vertex_aabbs(bodyB.vertices, inflation_radius);
     const Eigen::MatrixXi &EA = bodyA.edges, &EB = bodyB.edges,

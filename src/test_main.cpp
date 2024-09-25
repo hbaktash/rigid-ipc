@@ -23,6 +23,10 @@
 
 #include "nlohmann/json.hpp"
 
+#include <tbb/global_control.h>
+#include <tbb/task_scheduler_init.h>
+#include <thread>
+
 #include <SimState.hpp>
 #include <igl/opengl/glfw/Viewer.h>
 // #include "polyscope/nlohmann/json.hpp"
@@ -49,12 +53,17 @@ int main(int argc, char* argv[])
     mesh = mesh_ptr.release();
     geometry = geometry_ptr.release();
 
+    tbb::global_control thread_limiter(
+        tbb::global_control::max_allowed_parallelism, 1);
+
     ipc::rigid::SimState sim;
+
+    std::cout<< "loading scene" << std::endl;
     bool success = sim.load_scene("../fixtures/3D/examples/example.json");
     if (!success) {
         return 1;
     }
-    
+    std::cout<< "scene loaded" << std::endl;
     // std::string fout = "../fixtures/3D/examples/my_wrapper_sim.json";
     // // sim.run_simulation(fout);
 
@@ -87,7 +96,7 @@ int main(int argc, char* argv[])
     // Draw the mesh
     Eigen::MatrixXd V = sim.problem_ptr.get()->vertices();
     Eigen::MatrixXi F = sim.problem_ptr.get()->faces();
-    // viewer.data().clear();
+    viewer.data().clear();
     igl::opengl::glfw::Viewer viewer2;
     viewer2.data().set_mesh(V, F);
     viewer2.data().set_face_based(true);
