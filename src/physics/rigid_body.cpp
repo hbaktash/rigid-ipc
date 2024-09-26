@@ -292,9 +292,9 @@ RigidBody::RigidBody(
 
 
         // Hull stuff
-        // only modifying V, F, E
+        // only modifying V, F, E, and **mesh_selector**
         //  ; other geometric properties are computed after this
-        //  ; center of mass is already computed
+        //  ; center of mass and moments are already computed
         if (this->vertices.rows() > 4){ // not ground
             std::cout<< " ######### modifying object to its convex hull ######### "<< std::endl;
             std::vector<size_t> hull_to_input_map;

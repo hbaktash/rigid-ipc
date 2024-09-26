@@ -337,9 +337,14 @@ void SimState::run_simulation(const std::string& fout)
     for (int i = 0; i < m_max_simulation_steps; ++i) {
         simulation_step();
         save_simulation_step();
+
         spdlog::info(
             "Finished it={} sim_step={}", i + 1, m_num_simulation_steps);
-
+        Eigen::MatrixXd velos = problem_ptr.get()->velocities();
+        std::cout << "  ####### velo at i" << i << "   norm: "<< velos.norm() << std::endl;
+        if (velos.norm() < 1e-10){
+            break;
+        }
         // Checkpoint the simulation every m_checkpoint_frequency time-steps
         if ((i + 1) % m_checkpoint_frequency == 0
             && (i + 1) < m_max_simulation_steps) {

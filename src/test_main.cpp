@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
     ipc::rigid::SimState sim;
 
     std::cout<< "loading scene" << std::endl;
-    bool success = sim.load_scene("../fixtures/3D/examples/example.json");
+    bool success = sim.load_scene("../fixtures/3D/examples/example.json", "");
     if (!success) {
         return 1;
     }
@@ -84,11 +84,25 @@ int main(int argc, char* argv[])
     timer.start();
     sim.m_solve_collisions = true;
     // print_progress_bar(0, m_max_simulation_steps, 0);
+    std::vector<double> velo_norms;
     for (int i = 0; i < sim.m_max_simulation_steps; ++i) {
         sim.simulation_step();
-        sim.save_simulation_step();
-        // spdlog::info("Finished it={} sim_step={}", i + 1, m_num_simulation_steps);
+        // sim.save_simulation_step();
+        spdlog::info("Finished it={} sim_step={}", i + 1, sim.m_num_simulation_steps);
+        Eigen::MatrixXd velos = sim.problem_ptr.get()->velocities();
+        if (velos.norm() < 1e-10){
+            std::cout << "breaking at i" << i << "   norm: "<< velos.norm() << std::endl;
+            break;
+        }
+        // velo_norms.push_back(velos.norm());
     }
+    // std::cout << "velocities norms: " << std::endl;
+    // int i = 0;
+    // for (double vel_norm: velo_norms){
+    //     if (vel_norm < 1e-9)
+    //         std::cout << "at i" << i << " : "<< vel_norm << std::endl;
+    //     i++;
+    // }
     std::cout << "simulation ended with steps: "<< sim.state_sequence.size() << std::endl;
     timer.stop();
     std::cout << "that took " << timer.getElapsedTime() << " seconds" << std::endl;

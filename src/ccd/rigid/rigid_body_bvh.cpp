@@ -11,8 +11,8 @@ void detect_body_pair_collision_candidates_from_aabbs(
     Candidates& candidates,
     const double inflation_radius)
 {
-    bool build_ev = collision_types & CollisionType::EDGE_VERTEX; //false; // 
-    bool build_ee = collision_types & CollisionType::EDGE_EDGE; //false; // 
+    bool build_ev = false; // collision_types & CollisionType::EDGE_VERTEX; //false; // 
+    bool build_ee = false; // collision_types & CollisionType::EDGE_EDGE; //false; // 
     bool build_fv = collision_types & CollisionType::FACE_VERTEX;
     auto add_ev = [&](size_t eai, size_t vbi) {
         if (build_ev) {
