@@ -48,7 +48,7 @@ get_convex_hull(Eigen::MatrixXd point_set){
     }
     coordT* data = new coordT[num_points * dim];
     std::copy(pset_flat_vec.begin(), pset_flat_vec.end(), data);
-    Qhull qhull("n", 3, num_points, data, "QJ Q3");
+    Qhull qhull("n", 3, num_points, data, "Qt");
     
     // make data structures
     size_t my_count = 0, max_ind = 0;
