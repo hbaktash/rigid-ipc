@@ -53,8 +53,8 @@ public:
     std::vector<int> num_contacts;
     std::vector<double> step_minimum_distances;
 
-    igl::Timer step_timer;
 protected:
+    igl::Timer step_timer;
     size_t initial_rss;
 
     bool m_dirty_constraints;

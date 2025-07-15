@@ -14,23 +14,7 @@
 #include <logger.hpp>
 #include <profiler.hpp>
 
-#include <igl/opengl/glfw/Viewer.h>
-// #include <igl/Timer.h>
-
-// #include <Eigen/Core>
-// #include "libqhullcpp/QhullFacet.h"
-// #include "libqhullcpp/QhullFacetList.h"
-// #include "libqhullcpp/QhullVertex.h"
-// #include "libqhullcpp/QhullVertexSet.h"
-// #include "libqhullcpp/Qhull.h"
-// #include "libqhull/qhull_a.h"
-
-// using orgQhull::Qhull;
-// using orgQhull::QhullFacet;
-// using orgQhull::QhullVertex;
-
 namespace ipc::rigid {
-
 
 NLOHMANN_JSON_SERIALIZE_ENUM(
     BarrierType,
@@ -304,41 +288,17 @@ void DistanceBarrierConstraint::construct_constraint_set(
     const double& dmin = minimum_separation_distance;
     const double inflation_radius = (dhat + dmin) / 2.0;
 
-    // std:: cout << " @@@@@ in construct const set @@@@@ " << std::endl;
-    // igl::Timer timer;
-    // timer.start();
     Candidates candidates;
     detect_collision_candidates_rigid(
         bodies, poses, dim_to_collision_type(bodies.dim()), candidates,
         detection_method, inflation_radius);
-    // std::cout << " ----- collision candid detection time: "<< timer.getElapsedTime() << std::endl;
-    // timer.stop();
-    // TODO remove from candids
-
-    // hull edits:
-    // timer.start();
-    // Eigen::MatrixXd V1 = bodies.world_vertices(poses);
-    // Eigen::MatrixXi F = bodies.m_faces;
-    // Eigen::VectorXi is_on_hull = get_hull_indicator(V1, F);
-    
-    
-    // candidates.ev_candidates.clear();
-    // candidates.ee_candidates.clear();
-    // std::vector<FaceVertexCandidate> new_fv_candidates;
-    // for (FaceVertexCandidate cand: candidates.fv_candidates){
-    //     if (is_on_hull(cand.vertex_index) == 1){
-    //         new_fv_candidates.push_back(cand);
-    //     }
-    // }
-    // candidates.fv_candidates = new_fv_candidates;
-    // std::cout << " ----- candid replacement time: "<< timer.getElapsedTime() << std::endl;
-    // timer.stop();
 
     Eigen::MatrixXd V = bodies.world_vertices(poses);
     ipc::construct_constraint_set(
         candidates, /*V_rest=*/V, V, bodies.m_edges, bodies.m_faces,
         /*dhat=*/dhat, constraint_set, bodies.m_faces_to_edges,
         /*dmin=*/dmin);
+
     PROFILE_END();
 
     cached_poses = poses;

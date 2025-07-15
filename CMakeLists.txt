@@ -190,29 +190,14 @@ target_link_libraries(ipc_rigid PRIVATE ipc::rigid::warnings)
 
 # libigl
 include(eigen)
-
 include(libigl)
-
 target_link_libraries(ipc_rigid PUBLIC
-Eigen3::Eigen
-igl::core
-igl::predicates
-igl::opengl igl::opengl_glfw igl::opengl_glfw_imgui igl::png
+  Eigen3::Eigen
+  igl::core
+  igl::predicates
 )
 
-include(gif_h)
-target_link_libraries(ipc_rigid PRIVATE gif_h::gif_h)
-
-include(qhull)
-target_link_libraries(ipc_rigid PRIVATE qhull::qhull)
-
-include(geometry-central)
-target_link_libraries(ipc_rigid PUBLIC geometry-central::geometry-central)
-
-
 # JSON Parser
-# if(NOT TARGET nlohmann::json)
-# endif()
 include(json)
 target_link_libraries(ipc_rigid PUBLIC nlohmann::json)
 
@@ -319,22 +304,6 @@ if(RIGID_IPC_WITH_OPENGL)
     include(gif_h)
     target_link_libraries(rigid_ipc_sim PRIVATE gif_h::gif_h)
 endif()
-
-################################################################################
-# My wrappers
-################################################################################
-
-add_executable(my_rigid_ipc_wrapper src/test_main.cpp)
-target_link_libraries(my_rigid_ipc_wrapper PUBLIC ipc::rigid)
-include(cli11)
-target_link_libraries(my_rigid_ipc_wrapper PUBLIC CLI11::CLI11)
-target_compile_definitions(my_rigid_ipc_wrapper PUBLIC RIGID_IPC_WITH_OPENGL)
-include(libigl)
-target_link_libraries(my_rigid_ipc_wrapper PUBLIC
-    igl::opengl igl::opengl_glfw igl::opengl_glfw_imgui igl::png)
-
-# include(polyscope)
-# target_link_libraries(my_rigid_ipc_wrapper PUBLIC polyscope::polyscope)
 
 ################################################################################
 # Tools
